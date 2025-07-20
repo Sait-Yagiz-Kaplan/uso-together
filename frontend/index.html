@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uso Together</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0f0f0f;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 50px;
+            margin: 20px 0;
+        }
+
+        .section {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255,255,255,0.05);
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            background: #77dd77;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5cbf5c;
+        }
+
+        #player {
+            margin-top: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Uso Together</h1>
+
+    <div id="player"></div>
+
+    <div class="section" id="videoControls" style="display:none">
+        <div class="button-group">
+            <button onclick="playVideo()">▶️ Oynat</button>
+            <button onclick="pauseVideo()">⏸️ Durdur</button>
+        </div>
+    </div>
+
+    <div class="section" id="controls" style="display:none">
+        <h2>Oda: <span id="currentRoom"></span></h2>
+        <input type="text" id="videoInput" placeholder="YouTube Video ID veya Link">
+        <button onclick="setVideo()">Videoyu Ayarla</button>
+    </div>
+
+    <div class="section" id="roomSection">
+        <button onclick="createRoom()">Oda Oluştur</button>
+        <input type="text" id="roomInput" placeholder="Oda Kodu">
+        <button onclick="joinRoom()">Odaya Katıl</button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        let socket;
+        let roomId = '';
+        let player;
+
+        function createRoom() {
+            roomId = Math.random().toString(36).substring(2, 8);
+            connectSocket();
+            alert('Oda Oluşturuldu: ' + roomId);
+            document.getElementById('currentRoom').innerText = roomId;
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('videoControls').style.display = 'block';
+            document.getElementById('roomSection').style.display = 'none';
+        }
+
+        function joinRoom() {
+            roomId = document.getElementById('roomInput').value.trim();
+            if (!roomId) return alert('Oda kodu gir!');
+            connectSocket();
+            document.getElementById('currentRoom').innerText = roomId;
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('videoControls').style.display = 'block';
+            document.getElementById('roomSection').style.display = 'none';
+        }
+
+        function connectSocket() {
+            socket = io('https://railwayden-gelen-url.app');
+
+            socket.emit('joinRoom', roomId);
+
+            socket.on('setVideo', loadVideo);
+            socket.on('playPause', ({ isPlaying, timestamp }) => {
+                player.seekTo(timestamp);
+                isPlaying ? player.playVideo() : player.pauseVideo();
+            });
+
+            socket.on('syncState', state => {
+                if (state.videoId) loadVideo(state.videoId);
+                if (state.timestamp !== undefined) player.seekTo(state.timestamp);
+                if (state.isPlaying) player.playVideo();
+            });
+        }
+
+        function setVideo() {
+            let input = document.getElementById('videoInput').value.trim();
+            if (!input || !socket) return alert('Odaya katıl önce!');
+
+            const videoId = extractVideoId(input);
+            if (!videoId) return alert('Geçersiz YouTube linki veya ID!');
+
+            loadVideo(videoId);
+            socket.emit('setVideo', { roomId, videoId });
+        }
+
+        function playVideo() {
+            if (!player || !socket) return;
+            const time = player.getCurrentTime();
+            player.playVideo();
+            socket.emit('playPause', { roomId, isPlaying: true, timestamp: time });
+        }
+
+        function pauseVideo() {
+            if (!player || !socket) return;
+            const time = player.getCurrentTime();
+            player.pauseVideo();
+            socket.emit('playPause', { roomId, isPlaying: false, timestamp: time });
+        }
+
+        function loadVideo(videoId) {
+            if (player) {
+                player.loadVideoById(videoId);
+            } else {
+                player = new YT.Player('player', {
+                    height: '360',
+                    width: '640',
+                    videoId: videoId,
+                    events: {}
+                });
+            }
+        }
+
+        function extractVideoId(urlOrId) {
+            const regex = /(?:https?:\/\/)?(?:www\.)?youtu(?:\.be\/|be\.com\/watch\?v=)([\w-]{11})/;
+            const match = urlOrId.match(regex);
+            if (match && match[1]) return match[1];
+            if (urlOrId.length === 11) return urlOrId;
+            return null;
+        }
+
+        function onYouTubeIframeAPIReady() {}
+    </script>
+</body>
+</html>
