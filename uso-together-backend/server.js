@@ -1,50 +1,51 @@
 const express = require('express');
 const http = require('http');
-const cors = require('cors');
 const { Server } = require('socket.io');
+const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 
-const server = http.createServer(app);
+app.use(express.static(path.join(__dirname, '../frontend')));
 
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-    }
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-const rooms = {};  // roomId: { videoId, isPlaying, timestamp }
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+  }
+});
 
 io.on('connection', (socket) => {
-    console.log('Bir kullanıcı bağlandı:', socket.id);
+  console.log('Bir kullanıcı bağlandı:', socket.id);
 
-    socket.on('joinRoom', (roomId) => {
-        socket.join(roomId);
-        if (rooms[roomId]) {
-            socket.emit('syncState', rooms[roomId]);
-        }
-    });
+  socket.on('joinRoom', (roomId) => {
+    socket.join(roomId);
+    console.log(`Socket ${socket.id} joined room ${roomId}`);
+  });
 
-    socket.on('setVideo', ({ roomId, videoId }) => {
-        if (!rooms[roomId]) rooms[roomId] = {};
-        rooms[roomId].videoId = videoId;
-        io.to(roomId).emit('setVideo', videoId);
-    });
+  socket.on('setVideo', ({ roomId, videoId }) => {
+    socket.to(roomId).emit('setVideo', videoId);
+  });
 
-    socket.on('playPause', ({ roomId, isPlaying, timestamp }) => {
-        if (!rooms[roomId]) return;
-        rooms[roomId].isPlaying = isPlaying;
-        rooms[roomId].timestamp = timestamp;
-        io.to(roomId).emit('playPause', { isPlaying, timestamp });
-    });
+  socket.on('playPause', ({ roomId, isPlaying, timestamp }) => {
+    socket.to(roomId).emit('playPause', { isPlaying, timestamp });
+  });
 
-    socket.on('disconnect', () => {
-        console.log('Kullanıcı ayrıldı:', socket.id);
-    });
+  socket.on('syncState', ({ roomId, state }) => {
+    socket.to(roomId).emit('syncState', state);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Kullanıcı ayrıldı:', socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Backend ${PORT} portunda çalışıyor.`);
+  console.log(`Backend ${PORT} portunda çalışıyor.`);
 });
