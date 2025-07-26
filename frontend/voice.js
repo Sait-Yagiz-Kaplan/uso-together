@@ -1,18 +1,26 @@
 let localStream;
 let peerConnections = {};
+if (!window.socket) {
+    console.warn("Socket bağlantısı hazır değil!");
+}
 const config = {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
 };
 
 function startVoice() {
-    if (window.player) window.player.setVolume(10);
+    if (window.player) window.player.setVolume(3);
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         localStream = stream;
+        if (!window.socket) return console.warn("Socket yok, ses gönderilemez.");
+
+        window.socket.emit('ready'); // Odaya bağlanmış herkese sinyal başlatmaları için
+
         for (let socketId in peerConnections) {
-            let sender = peerConnections[socketId].getSenders().find(s => s.track.kind === 'audio');
-            if (!sender) {
+            const peer = peerConnections[socketId];
+            const alreadySent = peer.getSenders().some(s => s.track && s.track.kind === 'audio');
+            if (!alreadySent) {
                 stream.getTracks().forEach(track => {
-                    peerConnections[socketId].addTrack(track, stream);
+                    peer.addTrack(track, stream);
                 });
             }
         }
@@ -26,8 +34,9 @@ function stopVoice() {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
+        window.socket.emit('user-disconnected', socket.id);
     }
-    if (window.player) window.player.setVolume(100);
+    if (window.player) window.player.setVolume(80);
 }
 
 // Gelen bağlantı isteği geldiğinde yeni peer oluştur
@@ -94,3 +103,10 @@ function createPeer(socketId) {
 
     return peer;
 }
+
+socket.on('user-disconnected', (socketId) => {
+    if (peerConnections[socketId]) {
+        peerConnections[socketId].close();
+        delete peerConnections[socketId];
+    }
+});

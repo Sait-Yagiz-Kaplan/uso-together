@@ -60,6 +60,7 @@
         .button-group {
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
         }
     </style>
 </head>
@@ -90,6 +91,7 @@
 
     <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="voice.js"></script>
     <script>
         let socket;
         let roomId = '';
@@ -118,12 +120,33 @@
         function connectSocket() {
             socket = io('https://uso-together.onrender.com');
 
+            window.socket = socket;
             socket.emit('joinRoom', roomId);
+            socket.emit('voice-ready', roomId); // ✅ Otomatik sesli kanal başlat
 
             socket.on('setVideo', loadVideo);
-            socket.on('playPause', ({ isPlaying, timestamp }) => {
-                player.seekTo(timestamp);
-                isPlaying ? player.playVideo() : player.pauseVideo();
+            socket.on('playPause', async ({ isPlaying, timestamp }) => {
+                if (!player) return;
+
+                try {
+                    // Zorunlu senkronizasyon için video konumunu ayarla
+                    player.seekTo(timestamp, true);
+
+                    // YouTube API'nin içsel gecikmesine karşı 200ms bekle
+                    await new Promise(res => setTimeout(res, 200));
+
+                    // Oynatma veya duraklatma işlemini uygula
+                    if (isPlaying) {
+                        const playPromise = player.playVideo();
+                        if (playPromise && typeof playPromise.then === "function") {
+                            await playPromise.catch(err => console.warn("Autoplay engellendi:", err));
+                        }
+                    } else {
+                        player.pauseVideo();
+                    }
+                } catch (err) {
+                    console.error("Senkronda hata:", err);
+                }
             });
 
             socket.on('syncState', state => {
@@ -147,14 +170,12 @@
         function playVideo() {
             if (!player || !socket) return;
             const time = player.getCurrentTime();
-            player.playVideo();
             socket.emit('playPause', { roomId, isPlaying: true, timestamp: time });
         }
 
         function pauseVideo() {
             if (!player || !socket) return;
             const time = player.getCurrentTime();
-            player.pauseVideo();
             socket.emit('playPause', { roomId, isPlaying: false, timestamp: time });
         }
 
