@@ -7,57 +7,76 @@ const config = {
 function startVoice() {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         localStream = stream;
-        socket.emit('ready', roomId);
-    }).catch(e => {
-        alert('Mikrofon erişimi reddedildi!');
-        console.error(e);
+        for (let socketId in peerConnections) {
+            let sender = peerConnections[socketId].getSenders().find(s => s.track.kind === 'audio');
+            if (!sender) {
+                stream.getTracks().forEach(track => {
+                    peerConnections[socketId].addTrack(track, stream);
+                });
+            }
+        }
+    }).catch(err => {
+        console.error('Mikrofon erişimi reddedildi:', err);
+        alert('Mikrofon erişimi gerekiyor!');
     });
 }
 
+function stopVoice() {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+}
+
+// Gelen bağlantı isteği geldiğinde yeni peer oluştur
 socket.on('ready', (socketId) => {
     const peer = createPeer(socketId);
     peerConnections[socketId] = peer;
-    localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 });
 
-socket.on('offer', (data) => {
-    const peer = createPeer(data.socketId);
-    peerConnections[data.socketId] = peer;
-    peer.setRemoteDescription(new RTCSessionDescription(data.offer)).then(() => {
+// Teklif geldiğinde (offer)
+socket.on('offer', ({ socketId, offer }) => {
+    const peer = createPeer(socketId);
+    peerConnections[socketId] = peer;
+
+    peer.setRemoteDescription(new RTCSessionDescription(offer)).then(() => {
         return peer.createAnswer();
     }).then(answer => {
         return peer.setLocalDescription(answer);
     }).then(() => {
         socket.emit('answer', {
-            target: data.socketId,
+            target: socketId,
             answer: peer.localDescription
         });
     });
 });
 
-socket.on('answer', (data) => {
-    peerConnections[data.socketId].setRemoteDescription(new RTCSessionDescription(data.answer));
+// Cevap geldiğinde (answer)
+socket.on('answer', ({ socketId, answer }) => {
+    peerConnections[socketId].setRemoteDescription(new RTCSessionDescription(answer));
 });
 
-socket.on('ice-candidate', (data) => {
-    peerConnections[data.socketId].addIceCandidate(new RTCIceCandidate(data.candidate));
+// ICE candidate geldiğinde
+socket.on('ice-candidate', ({ socketId, candidate }) => {
+    peerConnections[socketId].addIceCandidate(new RTCIceCandidate(candidate));
 });
 
+// Peer bağlantısı oluşturur
 function createPeer(socketId) {
     const peer = new RTCPeerConnection(config);
 
-    peer.onicecandidate = e => {
-        if (e.candidate) {
+    peer.onicecandidate = (event) => {
+        if (event.candidate) {
             socket.emit('ice-candidate', {
                 target: socketId,
-                candidate: e.candidate
+                candidate: event.candidate
             });
         }
     };
 
-    peer.ontrack = e => {
+    peer.ontrack = (event) => {
         const audio = document.createElement('audio');
-        audio.srcObject = e.streams[0];
+        audio.srcObject = event.streams[0];
         audio.autoplay = true;
         document.body.appendChild(audio);
     };
