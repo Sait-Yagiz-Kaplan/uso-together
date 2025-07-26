@@ -5,6 +5,7 @@ const config = {
 };
 
 function startVoice() {
+    if (window.player) window.player.setVolume(10);
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         localStream = stream;
         for (let socketId in peerConnections) {
@@ -26,6 +27,7 @@ function stopVoice() {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
     }
+    if (window.player) window.player.setVolume(100);
 }
 
 // Gelen bağlantı isteği geldiğinde yeni peer oluştur

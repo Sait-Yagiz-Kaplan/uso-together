@@ -72,6 +72,7 @@
         <div class="button-group">
             <button onclick="playVideo()">▶️ Oynat</button>
             <button onclick="pauseVideo()">⏸️ Durdur</button>
+            <button id="startVoiceBtn" onmousedown="startVoice()" onmouseup="stopVoice()" ontouchstart="startVoice()" ontouchend="stopVoice()">🎤 Bas-Konuş</button>
         </div>
     </div>
 
@@ -87,9 +88,6 @@
         <button onclick="joinRoom()">Odaya Katıl</button>
     </div>
 
-    <div class="section" id="voiceControls" style="display:none">
-        <button id="startVoiceBtn" onmousedown="startVoice()" onmouseup="stopVoice()" ontouchstart="startVoice()" ontouchend="stopVoice()">🎤 Bas-Konuş</button>
-    </div>
     <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
