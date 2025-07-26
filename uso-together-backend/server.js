@@ -25,7 +25,9 @@ io.on('connection', (socket) => {
 
   socket.on('joinRoom', (roomId) => {
     socket.join(roomId);
+    socket.roomId = roomId;
     console.log(`Socket ${socket.id} joined room ${roomId}`);
+    socket.to(roomId).emit('ready', socket.id);
   });
 
   socket.on('setVideo', ({ roomId, videoId }) => {
@@ -40,8 +42,24 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('syncState', state);
   });
 
+  // WebRTC signaling events
+  socket.on('offer', ({ target, offer }) => {
+    io.to(target).emit('offer', { socketId: socket.id, offer });
+  });
+
+  socket.on('answer', ({ target, answer }) => {
+    io.to(target).emit('answer', { socketId: socket.id, answer });
+  });
+
+  socket.on('ice-candidate', ({ target, candidate }) => {
+    io.to(target).emit('ice-candidate', { socketId: socket.id, candidate });
+  });
+
   socket.on('disconnect', () => {
     console.log('Kullanıcı ayrıldı:', socket.id);
+    if (socket.roomId) {
+      socket.to(socket.roomId).emit('userDisconnected', socket.id);
+    }
   });
 });
 
