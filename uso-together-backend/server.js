@@ -40,6 +40,12 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('ready', socket.id);
   });
 
+  socket.on('createRoom', (roomId) => {
+    socket.join(roomId);
+    socket.roomId = roomId;
+    console.log(`Socket ${socket.id} created room ${roomId}`);
+  });
+
   socket.on('setVideo', ({ roomId, videoId }) => {
     socket.to(roomId).emit('setVideo', videoId);
   });
@@ -48,9 +54,6 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('playPause', { isPlaying, timestamp });
   });
 
-  socket.on('syncState', ({ roomId, state }) => {
-    socket.to(roomId).emit('syncState', state);
-  });
 
   socket.on('requestState', (roomId) => {
     // Bu odaya bağlı diğer kullanıcılardan birine syncState talebi gönder
@@ -97,3 +100,10 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Backend ${PORT} portunda çalışıyor.`);
 });
+  socket.on('play', ({ roomId }) => {
+    socket.to(roomId).emit('play');
+  });
+
+  socket.on('pause', ({ roomId }) => {
+    socket.to(roomId).emit('pause');
+  });

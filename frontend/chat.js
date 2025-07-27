@@ -1,7 +1,6 @@
-
-
 const chatBox = document.getElementById('chat');
 const chatInput = document.getElementById('chatInput');
+const socket = window.socket;
 
 let anonId = null;
 

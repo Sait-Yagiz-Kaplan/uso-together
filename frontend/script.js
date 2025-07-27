@@ -1,27 +1,11 @@
+const socket = window.socket;
 
-
-const socket = io();
-
-let player;
 let roomId = null;
 let userName = '';
 let userCount = 0;
 
-// YouTube API
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player('player', {
-    height: '360',
-    width: '640',
-    videoId: '',
-    events: {
-      'onReady': onPlayerReady,
-    }
-  });
-}
-
-function onPlayerReady() {
-  document.getElementById('videoControls').style.display = 'block';
-}
+// YouTube API is now globally loaded, so just grab it
+let player = window.player;
 
 // Room
 function createRoom() {
@@ -48,8 +32,8 @@ function joinRoom() {
 function setVideo() {
   const videoInput = document.getElementById('videoInput').value;
   const videoId = extractVideoId(videoInput);
-  if (!videoId || !player) return;
-  player.loadVideoById(videoId);
+  if (!videoId || !window.player) return;
+  window.player.loadVideoById(videoId);
   socket.emit('setVideo', { roomId, videoId });
 }
 
@@ -61,24 +45,24 @@ function extractVideoId(input) {
 
 // Play/Pause
 function playVideo() {
-  player.playVideo();
+  if (window.player) window.player.playVideo();
   socket.emit('play', { roomId });
 }
 
 function pauseVideo() {
-  player.pauseVideo();
+  if (window.player) window.player.pauseVideo();
   socket.emit('pause', { roomId });
 }
 
 // Socket Events
 socket.on('setVideo', ({ videoId }) => {
-  if (player) player.loadVideoById(videoId);
+  if (window.player) window.player.loadVideoById(videoId);
 });
 
 socket.on('play', () => {
-  if (player) player.playVideo();
+  if (window.player) window.player.playVideo();
 });
 
 socket.on('pause', () => {
-  if (player) player.pauseVideo();
+  if (window.player) window.player.pauseVideo();
 });

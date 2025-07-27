@@ -2,7 +2,7 @@ let localStream;
 let peerConnections = {};
 
 // Socket referansı globalden alınıyor
-let socket = window.voiceSocket ?? window.socket;
+const socket = window.socket;
 
 socket.on("connect", () => {
     window.mySocketId = socket.id;

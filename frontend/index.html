@@ -45,8 +45,25 @@
     <button onclick="sendMessage()">Gönder</button>
   </div>
 
-  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    // YouTube API global player
+    window.onYouTubeIframeAPIReady = function () {
+      window.player = new YT.Player("player", {
+        height: "360",
+        width: "640",
+        events: {
+          onReady: function (event) {
+            event.target.mute();
+          }
+        }
+      });
+    };
+  </script>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+  <script>
+    window.socket = io();
+  </script>
   <script src="script.js"></script>
   <script src="voice.js"></script>
   <script src="chat.js"></script>
