@@ -1,11 +1,13 @@
 let localStream;
 let peerConnections = {};
 
-// Voice.js tarafında socket'ı net al
+// Socket referansı globalden alınıyor
 let socket = window.voiceSocket ?? window.socket;
+
 socket.on("connect", () => {
     window.mySocketId = socket.id;
 });
+
 const config = {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
 };
@@ -16,7 +18,7 @@ function startVoice() {
         localStream = stream;
         if (!socket) return console.warn("Socket yok, ses gönderilemez.");
 
-        socket.emit('ready'); // Odaya bağlanmış herkese sinyal başlatmaları için
+        socket.emit('ready');
 
         for (let socketId in peerConnections) {
             const peer = peerConnections[socketId];
@@ -42,13 +44,11 @@ function stopVoice() {
     if (window.player) window.player.setVolume(80);
 }
 
-// Gelen bağlantı isteği geldiğinde yeni peer oluştur
 socket.on('ready', (socketId) => {
     const peer = createPeer(socketId);
     peerConnections[socketId] = peer;
 });
 
-// Teklif geldiğinde (offer)
 socket.on('offer', ({ socketId, offer }) => {
     const peer = createPeer(socketId);
     peerConnections[socketId] = peer;
@@ -65,17 +65,14 @@ socket.on('offer', ({ socketId, offer }) => {
     });
 });
 
-// Cevap geldiğinde (answer)
 socket.on('answer', ({ socketId, answer }) => {
     peerConnections[socketId].setRemoteDescription(new RTCSessionDescription(answer));
 });
 
-// ICE candidate geldiğinde
 socket.on('ice-candidate', ({ socketId, candidate }) => {
     peerConnections[socketId].addIceCandidate(new RTCIceCandidate(candidate));
 });
 
-// Peer bağlantısı oluşturur
 function createPeer(socketId) {
     const peer = new RTCPeerConnection(config);
 

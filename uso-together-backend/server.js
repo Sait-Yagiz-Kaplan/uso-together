@@ -23,6 +23,16 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
   console.log('Bir kullanıcı bağlandı:', socket.id);
 
+  // Anonim kullanıcı adı atama
+  if (!global.anonCount) global.anonCount = 1;
+  const username = `anon-${global.anonCount++}`;
+  socket.emit('assignUsername', username);
+
+  // Chat mesajlarını dinle ve odadakilere gönder
+  socket.on('chatMessage', ({ roomId, user, message }) => {
+    socket.to(roomId).emit('chatMessage', { user, message });
+  });
+
   socket.on('joinRoom', (roomId) => {
     socket.join(roomId);
     socket.roomId = roomId;
