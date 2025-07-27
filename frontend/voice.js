@@ -1,6 +1,12 @@
 let localStream;
 let peerConnections = {};
-if (!window.socket) {
+
+// Voice.js tarafında socket'ı net al
+const socket = window.voiceSocket;
+socket.on("connect", () => {
+    window.mySocketId = socket.id;
+});
+if (!socket) {
     console.warn("Socket bağlantısı hazır değil!");
 }
 const config = {
@@ -11,9 +17,9 @@ function startVoice() {
     if (window.player) window.player.setVolume(3);
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         localStream = stream;
-        if (!window.socket) return console.warn("Socket yok, ses gönderilemez.");
+        if (!socket) return console.warn("Socket yok, ses gönderilemez.");
 
-        window.socket.emit('ready'); // Odaya bağlanmış herkese sinyal başlatmaları için
+        socket.emit('ready'); // Odaya bağlanmış herkese sinyal başlatmaları için
 
         for (let socketId in peerConnections) {
             const peer = peerConnections[socketId];
@@ -34,7 +40,7 @@ function stopVoice() {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
-        window.socket.emit('user-disconnected', socket.id);
+        socket.emit('user-disconnected', window.mySocketId);
     }
     if (window.player) window.player.setVolume(80);
 }

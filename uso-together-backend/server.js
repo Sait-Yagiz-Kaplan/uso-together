@@ -42,6 +42,26 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('syncState', state);
   });
 
+  socket.on('requestState', (roomId) => {
+    // Bu odaya bağlı diğer kullanıcılardan birine syncState talebi gönder
+    // Örneğin ilk kullanıcıya iletebiliriz
+    const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
+    const otherClient = clients.find(id => id !== socket.id);
+
+    if (otherClient) {
+      io.to(otherClient).emit('syncStateRequest', { requesterId: socket.id });
+    }
+  });
+
+  socket.on('syncState', ({ roomId, state, target }) => {
+    // Eğer özel bir hedef verildiyse sadece ona gönder
+    if (target) {
+      io.to(target).emit('syncState', state);
+    } else {
+      socket.to(roomId).emit('syncState', state);
+    }
+  });
+
   // WebRTC signaling events
   socket.on('offer', ({ target, offer }) => {
     io.to(target).emit('offer', { socketId: socket.id, offer });
