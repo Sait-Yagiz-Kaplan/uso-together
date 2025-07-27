@@ -2,13 +2,10 @@ let localStream;
 let peerConnections = {};
 
 // Voice.js tarafında socket'ı net al
-const socket = window.voiceSocket;
+const socket = window.voiceSocket || window.socket;
 socket.on("connect", () => {
     window.mySocketId = socket.id;
 });
-if (!socket) {
-    console.warn("Socket bağlantısı hazır değil!");
-}
 const config = {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
 };
