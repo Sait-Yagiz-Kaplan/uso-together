@@ -221,6 +221,9 @@
                     events: {
                         onReady: () => {
                             isPlayerReady = true;
+                            if (socket && roomId) {
+                                socket.emit("requestState", roomId);
+                            }
                         }
                     }
                 });

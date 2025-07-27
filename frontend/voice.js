@@ -2,7 +2,7 @@ let localStream;
 let peerConnections = {};
 
 // Voice.js tarafında socket'ı net al
-const socket = window.voiceSocket || window.socket;
+let socket = window.voiceSocket ?? window.socket;
 socket.on("connect", () => {
     window.mySocketId = socket.id;
 });
@@ -113,3 +113,6 @@ socket.on('user-disconnected', (socketId) => {
         delete peerConnections[socketId];
     }
 });
+
+window.startVoice = startVoice;
+window.stopVoice = stopVoice;
